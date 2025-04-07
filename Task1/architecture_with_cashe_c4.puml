@@ -1,0 +1,62 @@
+@startuml JewerlyStoreSystem
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+
+title Jewerly Store System Component Diagram
+
+Person(Customer, "Customer", "Description of external person.")
+Person(Seller, "Seller", "Operates with order, confirms manufacturing for the user")
+Person(ApiUser, "API user", "Description of external person.")
+Person(Operator, "Operator", "Takes order in work, manufactures jewerly ")
+
+Container_Boundary(JewerlyStoreSystem, "Jewerly Store System\n[Software system]") {
+    Container(InternetShop, "Internet Shop", "Vue, TypeScript, Threejs", "User can make an order, upload 3d model, work in 3d editor")
+    Component(ShopApi, "Shop API", "SpringBoot", "- provide list of shop items\n- receives user generated or uploaded 3d file\n- save information about order from customer perspective")
+
+    Container(CRM, "CRM", "Vue, Typescript", "Description of web browser container role/responsibility.")
+    Component(CrmApi, "CRM API", "SpringBoot", "Description of container role/responsibility.")
+
+    Component(MesApi, "MES API", "C#", "- Assigns orders on operators\n- Shows list of orders\n- Calculates price of the order")
+    Container(MES, "MES", "React, typescript", "provide interface to assign orders on operators, shows list of orders")
+    Component(MESCashe, "MES Cashe", "", "Stores the calculation result for the most popular models")
+    Component(MESCasheInvalidator, "MES Cashe Invalidator", "", "Selections most popular models and warms cache")
+    ContainerQueue(MessagesQueue, "Messages Queue", "RabbitMQ", "Send messages about new orders, changes of statuses between containers, has several topics")
+    ComponentDb(MesDB, "MES db", "PostgreSQL", "Holds information about orders, its assignments on operators and statuses from MES perspective")
+
+    Component(3dFilesStorage, "3d files storage", "S3-based storage", "stores 3d files so that can be calculated")
+
+    ComponentDb(ShopDB, "Shop DB", "PostgreSQL", "Holds main information about work with customers and its orders")
+}
+
+Rel(Customer, InternetShop, "")
+Rel(Seller, CRM, "")
+Rel(ApiUser, MesApi, "")
+Rel(Operator, MES, "")
+
+Rel(InternetShop, ShopApi, "")
+
+Rel(CRM, CrmApi, "")
+
+Rel(MesApi, 3dFilesStorage, "")
+Rel(MesApi, MessagesQueue, "Consuming and check cache before start calculations")
+Rel(MesApi, MesDB, "")
+
+
+Rel(MES, MesApi, "")
+
+Rel(ShopApi, ShopDB, "")
+Rel(ShopApi, 3dFilesStorage, "uploads files")
+
+Rel(CrmApi, 3dFilesStorage, "")
+Rel(CrmApi, ShopDB, "")
+Rel(CrmApi, MessagesQueue, "")
+
+Rel(MessagesQueue, CrmApi, "")
+Rel(MessagesQueue, MesApi, "")
+
+Rel(MesApi, MESCashe, "")
+
+Rel(MESCasheInvalidator, MesApi, "Search most popular models")
+Rel(MESCasheInvalidator, MESCashe, "Invalidate and warms up the cache")
+
+@enduml
